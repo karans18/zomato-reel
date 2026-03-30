@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+import UserLogin from "../auth/UserLogin";
 import ReelFeed from "../../components/ReelFeed";
 import { useCart } from "../../context/CartContext";
 import "../../styles/reels.css";
@@ -12,6 +13,7 @@ const Home = () => {
   const [videos, setVideos] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAuthResolved, setIsAuthResolved] = useState(false);
 
   useEffect(() => {
     axios
@@ -25,10 +27,13 @@ const Home = () => {
         if (user?.accountType === "user") {
           refreshCart({ showLoader: false });
         }
+
+        setIsAuthResolved(true);
       })
       .catch(() => {
         setCurrentUser(null);
         setIsLoggedIn(false);
+        setIsAuthResolved(true);
       });
   }, []);
 
@@ -127,18 +132,39 @@ const Home = () => {
     navigate("/cart");
   }
 
+  function handleLoginSuccess(user) {
+    setCurrentUser(user);
+    setIsLoggedIn(Boolean(user));
+    setIsAuthResolved(true);
+
+    if (user?.accountType === "user") {
+      refreshCart({ showLoader: false });
+    }
+  }
+
   return (
-    <ReelFeed
-      items={videos}
-      onLike={likeVideo}
-      onSave={saveVideo}
-      onAddToCart={handleAddToCart}
-      onOpenCart={openCart}
-      cartCount={cartCount}
-      isLoggedIn={isLoggedIn}
-      canComment={currentUser?.accountType === "user"}
-      emptyMessage="No videos available."
-    />
+    <>
+      <ReelFeed
+        items={videos}
+        onLike={likeVideo}
+        onSave={saveVideo}
+        onAddToCart={handleAddToCart}
+        onOpenCart={openCart}
+        cartCount={cartCount}
+        isLoggedIn={isLoggedIn}
+        canComment={currentUser?.accountType === "user"}
+        emptyMessage="No videos available."
+      />
+
+      {isAuthResolved && !isLoggedIn ? (
+        <UserLogin
+          variant="overlay"
+          redirectOnSuccess={false}
+          showFoodPartnerShortcut
+          onSuccess={handleLoginSuccess}
+        />
+      ) : null}
+    </>
   );
 };
 

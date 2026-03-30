@@ -11,6 +11,19 @@
   background-attachment: fixed;
 }
 
+.auth-page-wrapper--overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  min-height: 0;
+  padding:
+    max(env(safe-area-inset-top, 0px), 18px)
+    16px
+    max(env(safe-area-inset-bottom, 0px), 18px);
+  background: transparent;
+  pointer-events: none;
+}
+
 @media (prefers-color-scheme: dark) {
   .auth-page-wrapper {
     background: radial-gradient(circle at 70% 60%, var(--color-surface-alt) 0%, var(--color-bg) 65%);
@@ -28,6 +41,68 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+}
+
+.auth-card--overlay {
+  max-width: 430px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  background: rgba(15, 23, 42, 0.6);
+  color: #fff;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
+  pointer-events: auto;
+}
+
+.auth-card--overlay .auth-subtitle,
+.auth-card--overlay .auth-alt-action,
+.auth-card--overlay .field-group label {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.auth-card--overlay .field-group input {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.auth-card--overlay .field-group input::placeholder {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.auth-card--overlay .field-group input:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
+}
+
+.auth-card--overlay .auth-alt-action a {
+  color: #fff;
+}
+
+.auth-partner-shortcut {
+  position: fixed;
+  top: max(env(safe-area-inset-top, 0px), 18px);
+  left: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.52);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+  pointer-events: auto;
+}
+
+.auth-partner-shortcut:hover,
+.auth-partner-shortcut:focus-visible {
+  color: #fff;
+  background: rgba(15, 23, 42, 0.68);
 }
 
 .auth-card header { text-align: center; }
@@ -118,6 +193,18 @@ button.auth-submit:focus-visible { outline: 2px solid var(--color-accent-hover);
 @media (max-width: 480px) {
   .auth-card { padding: var(--space-5) var(--space-5) var(--space-4); }
   .two-col { flex-direction: column; }
+
+  .auth-page-wrapper--overlay {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .auth-partner-shortcut {
+    left: 12px;
+    right: 12px;
+    width: fit-content;
+    max-width: calc(100vw - 24px);
+  }
 }
 
 /* Smooth transitions for theme change */
