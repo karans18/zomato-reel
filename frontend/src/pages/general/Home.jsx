@@ -132,6 +132,11 @@ const Home = () => {
   }
 
   function openCart() {
+    if (!isLoggedIn) {
+      openGuestLoginOverlay();
+      return;
+    }
+
     navigate("/cart");
   }
 

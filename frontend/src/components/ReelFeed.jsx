@@ -356,6 +356,17 @@ const ReelFeed = ({
                         <Link
                           className="reel-btn"
                           to={`/food-partner/${item.foodPartner}`}
+                          onClick={(event) => {
+                            if (isLoggedIn) {
+                              return;
+                            }
+
+                            event.preventDefault();
+
+                            if (typeof onRequireLogin === "function") {
+                              onRequireLogin();
+                            }
+                          }}
                         >
                           Visit store
                         </Link>
