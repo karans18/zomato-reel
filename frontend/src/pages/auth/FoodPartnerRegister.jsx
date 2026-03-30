@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/auth-shared.css';
-import axios from 'axios';
+import api from '../../lib/api';
 
 const FoodPartnerRegister = () => {
     const navigate = useNavigate();
@@ -26,14 +26,14 @@ const FoodPartnerRegister = () => {
 
         setLoading(true);
         try {
-            await axios.post("/api/auth/food-partner/register", {
+            await api.post("/api/auth/food-partner/register", {
                 name: businessName,
                 contactName,
                 phone,
                 email,
                 password,
                 address
-            }, { withCredentials: true });
+            });
 
             navigate("/create-food");
         } catch (err) {

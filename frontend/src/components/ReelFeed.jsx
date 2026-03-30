@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
+import api from "../lib/api";
 import socket from "../utlis/socket";
 
 function HeartIcon() {
@@ -195,10 +196,8 @@ const ReelFeed = ({
     socket.emit("join_reel", reelId);
 
     try {
-      const response = await fetch(`/api/food/comments/${reelId}`, {
-        credentials: "include",
-      });
-      const data = await response.json();
+      const response = await api.get(`/api/food/comments/${reelId}`);
+      const data = response.data;
 
       setComments(data.comments || []);
     } catch {

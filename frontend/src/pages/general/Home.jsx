@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+import api from "../../lib/api";
 import UserLogin from "../auth/UserLogin";
 import ReelFeed from "../../components/ReelFeed";
 import { useCart } from "../../context/CartContext";
@@ -17,8 +17,8 @@ const Home = () => {
   const [isLoginOverlayMinimized, setIsLoginOverlayMinimized] = useState(false);
 
   useEffect(() => {
-    axios
-      .get("/api/auth/me", { withCredentials: true })
+    api
+      .get("/api/auth/me")
       .then((response) => {
         const user = response.data.user || null;
 
@@ -41,8 +41,8 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    axios
-      .get("/api/food", { withCredentials: true })
+    api
+      .get("/api/food")
       .then((response) => {
         setVideos(response.data.foodItems || []);
       })
@@ -58,10 +58,9 @@ const Home = () => {
     }
 
     try {
-      const response = await axios.post(
+      const response = await api.post(
         "/api/food/like",
         { foodId: item._id },
-        { withCredentials: true },
       );
 
       setVideos((prev) =>
@@ -88,10 +87,9 @@ const Home = () => {
     }
 
     try {
-      const response = await axios.post(
+      const response = await api.post(
         "/api/food/save",
         { foodId: item._id },
-        { withCredentials: true },
       );
 
       setVideos((prev) =>

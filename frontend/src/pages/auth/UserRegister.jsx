@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/auth-shared.css';
-import axios from 'axios';
+import api from '../../lib/api';
 
 const UserRegister = () => {
     const navigate = useNavigate();
@@ -24,11 +24,11 @@ const UserRegister = () => {
 
         setLoading(true);
         try {
-            await axios.post("/api/auth/user/register", {
+            await api.post("/api/auth/user/register", {
                 fullName: firstName + " " + lastName,
                 email,
                 password
-            }, { withCredentials: true });
+            });
 
             navigate("/");
         } catch (err) {

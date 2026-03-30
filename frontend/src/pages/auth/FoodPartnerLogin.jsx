@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/auth-shared.css';
-import axios from 'axios';
+import api from '../../lib/api';
 
 const FoodPartnerLogin = () => {
     const navigate = useNavigate();
@@ -22,7 +22,7 @@ const FoodPartnerLogin = () => {
 
         setLoading(true);
         try {
-            await axios.post("/api/auth/food-partner/login", { email, password }, { withCredentials: true });
+            await api.post("/api/auth/food-partner/login", { email, password });
             navigate("/create-food");
         } catch (err) {
             setError(err.response?.data?.message || "Login failed. Please try again.");

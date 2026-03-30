@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
 import "../../styles/create-food.css";
 import { useNavigate } from "react-router-dom";
+import api from "../../lib/api";
 
 const CreateFood = () => {
   const [name, setName] = useState("");
@@ -75,7 +75,7 @@ const CreateFood = () => {
 
     setLoading(true);
     try {
-      await axios.post("/api/food", formData, { withCredentials: true });
+      await api.post("/api/food", formData);
       navigate("/");// Redirect to home after successful upload
       setName("");
       setDescription("");

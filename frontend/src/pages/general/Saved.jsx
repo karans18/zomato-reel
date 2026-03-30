@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import "../../styles/reels.css";
 import ReelFeed from "../../components/ReelFeed";
+import api from "../../lib/api";
 
 const Saved = () => {
   const [videos, setVideos] = useState([]);
@@ -9,8 +9,8 @@ const Saved = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    axios
-      .get("/api/auth/me", { withCredentials: true })
+    api
+      .get("/api/auth/me")
       .then((response) => {
         setCurrentUser(response.data.user || null);
         setIsLoggedIn(true);
@@ -22,8 +22,8 @@ const Saved = () => {
   }, []);
 
   useEffect(() => {
-    axios
-      .get("/api/food/save", { withCredentials: true })
+    api
+      .get("/api/food/save")
       .then((response) => {
         const savedFoods = (response.data.savedFoods || []).map((item) => ({
           _id: item.food?._id,
@@ -44,11 +44,7 @@ const Saved = () => {
 
   const removeSaved = async (item) => {
     try {
-      await axios.post(
-        "/api/food/save",
-        { foodId: item._id },
-        { withCredentials: true },
-      );
+      await api.post("/api/food/save", { foodId: item._id });
 
       setVideos((prev) => prev.filter((video) => video._id !== item._id));
     } catch {

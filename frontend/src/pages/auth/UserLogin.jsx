@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 
 import "../../styles/auth-shared.css";
+import api from "../../lib/api";
 
 const UserLogin = ({
   variant = "page",
@@ -24,8 +24,8 @@ const UserLogin = ({
 
     let isMounted = true;
 
-    axios
-      .get("/api/auth/me", { withCredentials: true })
+    api
+      .get("/api/auth/me")
       .then((response) => {
         if (!isMounted || !response.data.user) {
           return;
@@ -57,11 +57,10 @@ const UserLogin = ({
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        "/api/auth/user/login",
-        { email, password },
-        { withCredentials: true },
-      );
+      const response = await api.post("/api/auth/user/login", {
+        email,
+        password,
+      });
 
       if (typeof onSuccess === "function") {
         onSuccess(response.data.user || null);

@@ -2,12 +2,10 @@ const userModel = require("../models/user.model");
 const foodPartnerModel = require("../models/foodpartner.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-};
+const {
+  COOKIE_OPTIONS,
+  CLEAR_COOKIE_OPTIONS,
+} = require("../config/client.config");
 
 function serializeUser(user) {
   return {
@@ -109,7 +107,7 @@ async function loginUser(req, res) {
 }
 
 function logoutUser(req, res) {
-  res.clearCookie("token");
+  res.clearCookie("token", CLEAR_COOKIE_OPTIONS);
   res.status(200).json({ message: "User logged out successfully" });
 }
 
@@ -198,7 +196,7 @@ async function loginFoodPartner(req, res) {
 }
 
 function logoutFoodPartner(req, res) {
-  res.clearCookie("token");
+  res.clearCookie("token", CLEAR_COOKIE_OPTIONS);
   res.status(200).json({ message: "Food partner logged out successfully" });
 }
 

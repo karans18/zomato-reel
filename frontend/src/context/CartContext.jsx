@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import axios from "axios";
+import api from "../lib/api";
 
 const CartContext = createContext(null);
 
@@ -46,9 +46,7 @@ export function CartProvider({ children }) {
     }
 
     try {
-      const response = await axios.get("/api/food/cart", {
-        withCredentials: true,
-      });
+      const response = await api.get("/api/food/cart");
 
       setCart(normalizeCart(response.data.cart));
       setCartError("");
@@ -70,11 +68,7 @@ export function CartProvider({ children }) {
 
   async function addToCart(foodId) {
     try {
-      const response = await axios.post(
-        "/api/food/cart",
-        { foodId },
-        { withCredentials: true },
-      );
+      const response = await api.post("/api/food/cart", { foodId });
 
       const nextCart = normalizeCart(response.data.cart);
 
@@ -95,9 +89,7 @@ export function CartProvider({ children }) {
 
   async function removeFromCart(foodId) {
     try {
-      const response = await axios.delete(`/api/food/cart/${foodId}`, {
-        withCredentials: true,
-      });
+      const response = await api.delete(`/api/food/cart/${foodId}`);
 
       const nextCart = normalizeCart(response.data.cart);
 

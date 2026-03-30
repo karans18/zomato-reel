@@ -4,21 +4,21 @@ const authRoutes = require("./routes/auth.routes");
 const foodRoutes = require("./routes/food.routes");
 const foodPartnerRoutes = require("./routes/food-partner.routes");
 const cors = require("cors");
+const { corsOptions } = require("./config/client.config");
 
 const app = express();
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+app.set("trust proxy", 1);
 
-app.use(
-  cors({
-    origin: FRONTEND_ORIGIN,
-    credentials: true,
-  }),
-);
+app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Hello World");
+  res.status(200).json({ message: "Food View API is running" });
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
 });
 
 app.use("/api/auth", authRoutes);

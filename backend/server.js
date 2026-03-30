@@ -7,12 +7,12 @@ const connectDB = require("./src/db/db");
 const Comment = require("./src/models/comments.model");
 const Food = require("./src/models/food.model");
 const User = require("./src/models/user.model");
+const { getAllowedOrigins } = require("./src/config/client.config");
 const { normalizeComment } = require("./src/utils/comment.utils");
 
 connectDB();
 
 const server = http.createServer(app);
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 
 function parseCookies(cookieHeader = "") {
   return cookieHeader
@@ -37,7 +37,7 @@ function getReelRoom(reelId) {
 
 const io = new Server(server, {
   cors: {
-    origin: FRONTEND_ORIGIN,
+    origin: getAllowedOrigins(),
     credentials: true,
   },
 });

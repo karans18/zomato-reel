@@ -376,7 +376,9 @@ async function removeFromCart(req, res) {
       });
     }
 
-    const nextItems = cart.items.filter((item) => item.food.toString() !== foodId);
+    const nextItems = cart.items.filter(
+      (item) => item.food.toString() !== foodId,
+    );
 
     if (nextItems.length === cart.items.length) {
       return res.status(404).json({ message: "Item not found in cart" });
