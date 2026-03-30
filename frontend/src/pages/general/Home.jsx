@@ -14,6 +14,7 @@ const Home = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthResolved, setIsAuthResolved] = useState(false);
+  const [isLoginOverlayMinimized, setIsLoginOverlayMinimized] = useState(false);
 
   useEffect(() => {
     axios
@@ -28,11 +29,13 @@ const Home = () => {
           refreshCart({ showLoader: false });
         }
 
+        setIsLoginOverlayMinimized(false);
         setIsAuthResolved(true);
       })
       .catch(() => {
         setCurrentUser(null);
         setIsLoggedIn(false);
+        setIsLoginOverlayMinimized(false);
         setIsAuthResolved(true);
       });
   }, []);
@@ -50,7 +53,7 @@ const Home = () => {
 
   async function likeVideo(item) {
     if (!isLoggedIn) {
-      alert("Please login first");
+      openGuestLoginOverlay();
       return;
     }
 
@@ -80,7 +83,7 @@ const Home = () => {
 
   async function saveVideo(item) {
     if (!isLoggedIn) {
-      alert("Please login first");
+      openGuestLoginOverlay();
       return;
     }
 
@@ -110,7 +113,7 @@ const Home = () => {
 
   async function handleAddToCart(item) {
     if (!isLoggedIn) {
-      alert("Please login first");
+      openGuestLoginOverlay();
       return;
     }
 
@@ -136,10 +139,20 @@ const Home = () => {
     setCurrentUser(user);
     setIsLoggedIn(Boolean(user));
     setIsAuthResolved(true);
+    setIsLoginOverlayMinimized(false);
 
     if (user?.accountType === "user") {
       refreshCart({ showLoader: false });
     }
+  }
+
+  function openGuestLoginOverlay() {
+    setIsLoginOverlayMinimized(false);
+    setIsAuthResolved(true);
+  }
+
+  function minimizeGuestLoginOverlay() {
+    setIsLoginOverlayMinimized(true);
   }
 
   return (
@@ -153,6 +166,7 @@ const Home = () => {
         cartCount={cartCount}
         isLoggedIn={isLoggedIn}
         canComment={currentUser?.accountType === "user"}
+        onRequireLogin={openGuestLoginOverlay}
         emptyMessage="No videos available."
       />
 
@@ -161,6 +175,9 @@ const Home = () => {
           variant="overlay"
           redirectOnSuccess={false}
           showFoodPartnerShortcut
+          isMinimized={isLoginOverlayMinimized}
+          onMinimize={minimizeGuestLoginOverlay}
+          onRestore={openGuestLoginOverlay}
           onSuccess={handleLoginSuccess}
         />
       ) : null}

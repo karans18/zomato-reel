@@ -24,6 +24,15 @@
   pointer-events: none;
 }
 
+.auth-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.18), transparent 38%),
+    rgba(0, 0, 0, 0.26);
+  pointer-events: none;
+}
+
 @media (prefers-color-scheme: dark) {
   .auth-page-wrapper {
     background: radial-gradient(circle at 70% 60%, var(--color-surface-alt) 0%, var(--color-bg) 65%);
@@ -52,6 +61,22 @@
   backdrop-filter: blur(18px);
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
   pointer-events: auto;
+}
+
+.auth-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.auth-card__header-copy {
+  text-align: left;
+}
+
+.auth-card__header-copy .auth-title,
+.auth-card__header-copy .auth-subtitle {
+  margin-left: 0;
 }
 
 .auth-card--overlay .auth-subtitle,
@@ -103,6 +128,43 @@
 .auth-partner-shortcut:focus-visible {
   color: #fff;
   background: rgba(15, 23, 42, 0.68);
+}
+
+.auth-overlay-minimize,
+.auth-overlay-launcher {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.auth-overlay-minimize {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.auth-overlay-launcher {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+  transform: translateX(-50%);
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.62);
+  pointer-events: auto;
+}
+
+.auth-overlay-minimize:hover,
+.auth-overlay-minimize:focus-visible,
+.auth-overlay-launcher:hover,
+.auth-overlay-launcher:focus-visible {
+  background: rgba(15, 23, 42, 0.82);
+  color: #fff;
 }
 
 .auth-card header { text-align: center; }
@@ -204,6 +266,19 @@ button.auth-submit:focus-visible { outline: 2px solid var(--color-accent-hover);
     right: 12px;
     width: fit-content;
     max-width: calc(100vw - 24px);
+  }
+
+  .auth-card__top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .auth-overlay-minimize {
+    width: 100%;
+  }
+
+  .auth-overlay-launcher {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
   }
 }
 

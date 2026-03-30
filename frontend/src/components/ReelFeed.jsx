@@ -82,6 +82,7 @@ const ReelFeed = ({
   emptyMessage = "No videos yet.",
   isLoggedIn = false,
   canComment = false,
+  onRequireLogin,
 }) => {
   const videoRefs = useRef(new Map());
   const currentRoomRef = useRef(null);
@@ -174,6 +175,13 @@ const ReelFeed = ({
   };
 
   async function openComments(reelId) {
+    if (!isLoggedIn) {
+      if (typeof onRequireLogin === "function") {
+        onRequireLogin();
+      }
+      return;
+    }
+
     setShowComments(true);
     setCurrentReel(reelId);
     setIsLoadingComments(true);
@@ -219,8 +227,16 @@ const ReelFeed = ({
       return;
     }
 
-    if (!isLoggedIn || !canComment) {
+    if (!isLoggedIn) {
+      if (typeof onRequireLogin === "function") {
+        onRequireLogin();
+      }
       setCommentError("Please log in as a user to comment.");
+      return;
+    }
+
+    if (!canComment) {
+      setCommentError("Only user accounts can comment.");
       return;
     }
 
