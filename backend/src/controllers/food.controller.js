@@ -3,6 +3,7 @@ const storageService = require("../services/storage.service");
 const likeModel = require("../models/likes.model");
 const saveModel = require("../models/save.model");
 const commentModel = require("../models/comments.model");
+const cartModel = require("../models/cart.model");
 const { v4: uuid } = require("uuid");
 const { normalizeComment } = require("../utils/comment.utils");
 
@@ -30,6 +31,26 @@ async function buildCommentCountMap(reelIds = []) {
   ]);
 
   return new Map(commentCounts.map(({ _id, count }) => [String(_id), count]));
+}
+
+function normalizeCart(cart) {
+  const items = Array.isArray(cart?.items)
+    ? cart.items.filter((item) => item?.food?._id)
+    : [];
+
+  return {
+    _id: cart?._id ?? null,
+    user: cart?.user ?? null,
+    items,
+    totalItems: items.reduce(
+      (total, item) => total + Math.max(item.quantity ?? 0, 0),
+      0,
+    ),
+  };
+}
+
+async function getPopulatedCart(userId) {
+  return cartModel.findOne({ user: userId }).populate("items.food").lean();
 }
 
 async function createFood(req, res) {
@@ -261,6 +282,78 @@ async function getCommentsByReel(req, res) {
   }
 }
 
+async function getCart(req, res) {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const cart = await getPopulatedCart(user._id);
+
+    res.status(200).json({
+      message: "Cart fetched successfully",
+      cart: normalizeCart(cart),
+    });
+  } catch (err) {
+    console.error("getCart error:", err);
+    res.status(500).json({ message: err.message });
+  }
+}
+
+async function addToCart(req, res) {
+  try {
+    const { foodId } = req.body;
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!foodId) {
+      return res.status(400).json({ message: "foodId is required" });
+    }
+
+    const foodExists = await foodModel.exists({ _id: foodId });
+
+    if (!foodExists) {
+      return res.status(404).json({ message: "Food item not found" });
+    }
+
+    let cart = await cartModel.findOne({ user: user._id });
+
+    if (!cart) {
+      cart = await cartModel.create({
+        user: user._id,
+        items: [{ food: foodId, quantity: 1 }],
+      });
+    } else {
+      const itemIndex = cart.items.findIndex(
+        (item) => item.food.toString() === foodId,
+      );
+
+      if (itemIndex > -1) {
+        cart.items[itemIndex].quantity += 1;
+      } else {
+        cart.items.push({ food: foodId, quantity: 1 });
+      }
+
+      await cart.save();
+    }
+
+    const populatedCart = await getPopulatedCart(user._id);
+
+    res.status(200).json({
+      message: "Item added to cart successfully",
+      cart: normalizeCart(populatedCart),
+    });
+  } catch (err) {
+    console.error("addToCart error:", err);
+    res.status(500).json({ message: err.message });
+  }
+}
+
 module.exports = {
   createFood,
   getFoodItems,
@@ -268,4 +361,6 @@ module.exports = {
   saveFood,
   getSaveFood,
   getCommentsByReel,
+  getCart,
+  addToCart,
 };

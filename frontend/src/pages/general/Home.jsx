@@ -1,21 +1,30 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import "../../styles/reels.css";
+import { useNavigate } from "react-router-dom";
+
 import ReelFeed from "../../components/ReelFeed";
+import { useCart } from "../../context/CartContext";
+import "../../styles/reels.css";
 
 const Home = () => {
+  const navigate = useNavigate();
+  const { addToCart, cartCount, refreshCart } = useCart();
   const [videos, setVideos] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     axios
-      .get("/api/auth/me", {
-        withCredentials: true,
-      })
+      .get("/api/auth/me", { withCredentials: true })
       .then((response) => {
-        setCurrentUser(response.data.user || null);
-        setIsLoggedIn(true);
+        const user = response.data.user || null;
+
+        setCurrentUser(user);
+        setIsLoggedIn(Boolean(user));
+
+        if (user?.accountType === "user") {
+          refreshCart({ showLoader: false });
+        }
       })
       .catch(() => {
         setCurrentUser(null);
@@ -25,9 +34,7 @@ const Home = () => {
 
   useEffect(() => {
     axios
-      .get("/api/food", {
-        withCredentials: true,
-      })
+      .get("/api/food", { withCredentials: true })
       .then((response) => {
         setVideos(response.data.foodItems || []);
       })
@@ -61,8 +68,8 @@ const Home = () => {
             : video,
         ),
       );
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
     }
   }
 
@@ -91,9 +98,33 @@ const Home = () => {
             : video,
         ),
       );
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
     }
+  }
+
+  async function handleAddToCart(item) {
+    if (!isLoggedIn) {
+      alert("Please login first");
+      return;
+    }
+
+    if (currentUser?.accountType !== "user") {
+      alert("Please login with a user account to use the cart");
+      return;
+    }
+
+    try {
+      await addToCart(item._id);
+      alert("Item added to cart");
+    } catch (error) {
+      console.error("Add to cart error:", error);
+      alert(error.response?.data?.message || "Unable to add this item to cart");
+    }
+  }
+
+  function openCart() {
+    navigate("/cart");
   }
 
   return (
@@ -101,8 +132,10 @@ const Home = () => {
       items={videos}
       onLike={likeVideo}
       onSave={saveVideo}
+      onAddToCart={handleAddToCart}
+      onOpenCart={openCart}
+      cartCount={cartCount}
       isLoggedIn={isLoggedIn}
-      user={currentUser}
       canComment={currentUser?.accountType === "user"}
       emptyMessage="No videos available."
     />

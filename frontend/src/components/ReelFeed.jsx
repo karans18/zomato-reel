@@ -1,32 +1,65 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+
 import socket from "../utlis/socket";
 
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 21s-7-4.35-9.17-8.03A5.42 5.42 0 0 1 7.5 3c1.82 0 3.49.96 4.5 2.5A5.4 5.4 0 0 1 16.5 3a5.5 5.5 0 0 1 4.67 9.97C19 16.65 12 21 12 21Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function BookmarkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 4.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V5.5a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M7 18.5H4.5A1.5 1.5 0 0 1 3 17V6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5V17a1.5 1.5 0 0 1-1.5 1.5H12l-5 3v-3Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function formatCommentTime(timestamp) {
-  if (!timestamp) {
-    return "";
-  }
+  if (!timestamp) return "";
 
   const parsedDate = new Date(timestamp);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "";
-  }
+  if (Number.isNaN(parsedDate.getTime())) return "";
 
   const diffMs = Date.now() - parsedDate.getTime();
 
-  if (diffMs < 60 * 1000) {
-    return "Just now";
-  }
-
+  if (diffMs < 60 * 1000) return "Just now";
   if (diffMs < 60 * 60 * 1000) {
     return `${Math.floor(diffMs / (60 * 1000))}m ago`;
   }
-
   if (diffMs < 24 * 60 * 60 * 1000) {
     return `${Math.floor(diffMs / (60 * 60 * 1000))}h ago`;
   }
-
   if (diffMs < 7 * 24 * 60 * 60 * 1000) {
     return `${Math.floor(diffMs / (24 * 60 * 60 * 1000))}d ago`;
   }
@@ -43,13 +76,15 @@ const ReelFeed = ({
   items = [],
   onLike,
   onSave,
+  onAddToCart,
+  onOpenCart,
+  cartCount = 0,
   emptyMessage = "No videos yet.",
   isLoggedIn = false,
   canComment = false,
 }) => {
   const videoRefs = useRef(new Map());
   const currentRoomRef = useRef(null);
-  const itemsRef = useRef(items);
 
   const [comments, setComments] = useState([]);
   const [commentCounts, setCommentCounts] = useState({});
@@ -58,10 +93,6 @@ const ReelFeed = ({
   const [text, setText] = useState("");
   const [commentError, setCommentError] = useState("");
   const [isLoadingComments, setIsLoadingComments] = useState(false);
-
-  useEffect(() => {
-    itemsRef.current = items;
-  }, [items]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -75,35 +106,32 @@ const ReelFeed = ({
 
           if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
             video.play().catch(() => {});
-            return;
+          } else {
+            video.pause();
           }
-
-          video.pause();
         });
       },
       { threshold: [0, 0.25, 0.6, 0.9, 1] },
     );
 
     videoRefs.current.forEach((video) => observer.observe(video));
+
     return () => observer.disconnect();
   }, [items]);
 
   useEffect(() => {
     setCommentCounts((prev) => {
-      const nextCounts = { ...prev };
+      const next = { ...prev };
 
       items.forEach((item) => {
-        const incomingCount =
+        const count =
           item.commentsCount ??
           (Array.isArray(item.comments) ? item.comments.length : 0);
 
-        nextCounts[item._id] = Math.max(
-          nextCounts[item._id] ?? 0,
-          incomingCount,
-        );
+        next[item._id] = Math.max(next[item._id] ?? 0, count);
       });
 
-      return nextCounts;
+      return next;
     });
   }, [items]);
 
@@ -113,23 +141,10 @@ const ReelFeed = ({
         return;
       }
 
-      setCommentCounts((prev) => {
-        const matchingItem = itemsRef.current.find(
-          (item) => item._id === comment.reel,
-        );
-        const baseCount =
-          typeof prev[comment.reel] === "number"
-            ? prev[comment.reel]
-            : (matchingItem?.commentsCount ??
-              (Array.isArray(matchingItem?.comments)
-                ? matchingItem.comments.length
-                : 0));
-
-        return {
-          ...prev,
-          [comment.reel]: baseCount + 1,
-        };
-      });
+      setCommentCounts((prev) => ({
+        ...prev,
+        [comment.reel]: (prev[comment.reel] ?? 0) + 1,
+      }));
 
       if (comment.reel !== currentRoomRef.current) {
         return;
@@ -142,20 +157,10 @@ const ReelFeed = ({
       );
     };
 
-    const handleCommentError = (payload) => {
-      setCommentError(payload?.message || "Could not send comment.");
-    };
-
     socket.on("receive_comment", handleReceiveComment);
-    socket.on("comment_error", handleCommentError);
 
     return () => {
       socket.off("receive_comment", handleReceiveComment);
-      socket.off("comment_error", handleCommentError);
-
-      if (currentRoomRef.current) {
-        socket.emit("leave_reel", currentRoomRef.current);
-      }
     };
   }, []);
 
@@ -169,15 +174,10 @@ const ReelFeed = ({
   };
 
   async function openComments(reelId) {
-    if (!reelId) {
-      return;
-    }
-
     setShowComments(true);
     setCurrentReel(reelId);
-    setText("");
-    setCommentError("");
     setIsLoadingComments(true);
+    setCommentError("");
 
     if (currentRoomRef.current && currentRoomRef.current !== reelId) {
       socket.emit("leave_reel", currentRoomRef.current);
@@ -192,20 +192,10 @@ const ReelFeed = ({
       });
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to load comments");
-      }
-
-      const nextComments = Array.isArray(data.comments) ? data.comments : [];
-      setComments(nextComments);
-      setCommentCounts((prev) => ({
-        ...prev,
-        [reelId]: nextComments.length,
-      }));
-    } catch (error) {
-      console.error(error);
+      setComments(data.comments || []);
+    } catch {
       setComments([]);
-      setCommentError("Could not load comments right now.");
+      setCommentError("Unable to load comments right now.");
     } finally {
       setIsLoadingComments(false);
     }
@@ -222,13 +212,19 @@ const ReelFeed = ({
     setComments([]);
     setText("");
     setCommentError("");
-    setIsLoadingComments(false);
   }
 
   function sendComment() {
-    if (!currentReel || !text.trim() || !canComment) {
+    if (!text.trim()) {
       return;
     }
+
+    if (!isLoggedIn || !canComment) {
+      setCommentError("Please log in as a user to comment.");
+      return;
+    }
+
+    setCommentError("");
 
     socket.emit(
       "send_comment",
@@ -236,151 +232,145 @@ const ReelFeed = ({
         reelId: currentReel,
         text: text.trim(),
       },
-      (response) => {
-        if (response?.ok) {
-          setText("");
+      (result) => {
+        if (!result?.ok) {
+          setCommentError(result?.message || "Failed to send comment.");
           return;
         }
 
-        setCommentError(response?.message || "Could not send comment.");
+        setText("");
       },
     );
   }
 
   return (
     <div className="reels-page">
-      <div className="reels-feed" role="list">
-        {items.length === 0 && (
-          <div className="empty-state">
-            <p>{emptyMessage}</p>
-          </div>
-        )}
+      {typeof onOpenCart === "function" && (
+        <div className="reels-topbar">
+          <button
+            type="button"
+            className="reels-cart-button"
+            onClick={onOpenCart}
+          >
+            Cart
+            <span className="reels-cart-badge">{cartCount}</span>
+          </button>
+        </div>
+      )}
 
-        {items.map((item) => (
-          <section key={item._id} className="reel" role="listitem">
-            <video
-              ref={setVideoRef(item._id)}
-              className="reel-video"
-              src={item.video}
-              muted
-              playsInline
-              loop
-              preload="metadata"
-            />
+      {items.length === 0 ? (
+        <div className="empty-state">
+          <p>{emptyMessage}</p>
+        </div>
+      ) : (
+        <div className="reels-feed">
+          {items.map((item) => {
+            const commentCount = commentCounts[item._id] ?? item.commentsCount ?? 0;
 
-            <div className="reel-overlay">
-              <div className="reel-overlay-gradient" aria-hidden="true" />
+            return (
+              <section key={item._id} className="reel">
+                <video
+                  ref={setVideoRef(item._id)}
+                  className="reel-video"
+                  src={item.video}
+                  muted
+                  loop
+                  playsInline
+                />
 
-              <div className="reel-actions">
-                <div className="reel-action-group">
-                  <button
-                    onClick={() => isLoggedIn && onLike && onLike(item)}
-                    disabled={!isLoggedIn}
-                    className="reel-action"
-                    style={{
-                      opacity: isLoggedIn ? 1 : 0.5,
-                      cursor: isLoggedIn ? "pointer" : "not-allowed",
-                    }}
-                    aria-label="Like"
-                  >
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                <div className="reel-overlay-gradient" />
+
+                <div className="reel-overlay">
+                  <div className="reel-actions">
+                    {typeof onLike === "function" && (
+                      <button
+                        type="button"
+                        className="reel-action-group reel-action-group--button"
+                        onClick={() => onLike(item)}
+                        aria-label="Like this item"
+                      >
+                        <span className="reel-action">
+                          <HeartIcon />
+                        </span>
+                        <span className="reel-action__count">
+                          {item.likeCount ?? 0}
+                        </span>
+                      </button>
+                    )}
+
+                    {typeof onSave === "function" && (
+                      <button
+                        type="button"
+                        className="reel-action-group reel-action-group--button"
+                        onClick={() => onSave(item)}
+                        aria-label="Save this item"
+                      >
+                        <span className="reel-action">
+                          <BookmarkIcon />
+                        </span>
+                        <span className="reel-action__count">
+                          {item.savesCount ?? 0}
+                        </span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="reel-action-group reel-action-group--button"
+                      onClick={() => openComments(item._id)}
+                      aria-label="Open comments"
                     >
-                      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-8.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
-                    </svg>
-                  </button>
-                  <div className="reel-action__count">
-                    {item.likeCount ?? item.likesCount ?? item.likes ?? 0}
+                      <span className="reel-action">
+                        <ChatIcon />
+                      </span>
+                      <span className="reel-action__count">{commentCount}</span>
+                    </button>
+                  </div>
+
+                  <div className="reel-content">
+                    <div className="reel-copy">
+                      <h2 className="reel-title">{item.name || "Food item"}</h2>
+                      <p className="reel-description">
+                        {item.description || "Fresh food from this store."}
+                      </p>
+                    </div>
+
+                    <div className="reel-cta-row">
+                      {item.foodPartner && (
+                        <Link
+                          className="reel-btn"
+                          to={`/food-partner/${item.foodPartner}`}
+                        >
+                          Visit store
+                        </Link>
+                      )}
+
+                      {typeof onAddToCart === "function" && (
+                        <button
+                          type="button"
+                          className="reel-btn reel-btn--secondary"
+                          onClick={() => onAddToCart(item)}
+                        >
+                          Add to cart
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="reel-action-group">
-                  <button
-                    onClick={() => isLoggedIn && onSave && onSave(item)}
-                    disabled={!isLoggedIn}
-                    className="reel-action"
-                    style={{
-                      opacity: isLoggedIn ? 1 : 0.5,
-                      cursor: isLoggedIn ? "pointer" : "not-allowed",
-                    }}
-                    aria-label="Bookmark"
-                  >
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
-                    </svg>
-                  </button>
-                  <div className="reel-action__count">
-                    {item.savesCount ?? item.bookmarks ?? item.saves ?? 0}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="reel-action-group reel-action-group--button"
-                  onClick={() => openComments(item._id)}
-                  aria-label="Open comments"
-                >
-                  <span className="reel-action">
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
-                    </svg>
-                  </span>
-                  <span className="reel-action__count">
-                    {commentCounts[item._id] ??
-                      item.commentsCount ??
-                      (Array.isArray(item.comments) ? item.comments.length : 0)}
-                  </span>
-                </button>
-              </div>
-
-              <div className="reel-content">
-                <p className="reel-description">{item.description}</p>
-
-                {item.foodPartner && (
-                  <Link
-                    className="reel-btn"
-                    to={`/food-partner/${item.foodPartner}`}
-                  >
-                    Visit store
-                  </Link>
-                )}
-              </div>
-            </div>
-          </section>
-        ))}
-      </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {showComments && (
-        <div className="comment-modal" onClick={closeComments}>
-          <div
-            className="comment-box"
-            onClick={(event) => event.stopPropagation()}
-          >
+        <div
+          className="comment-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={closeComments}
+        >
+          <div className="comment-box" onClick={(event) => event.stopPropagation()}>
             <div className="comment-box__header">
               <h3>Comments</h3>
               <button
@@ -393,55 +383,48 @@ const ReelFeed = ({
             </div>
 
             <div className="comment-list">
-              {isLoadingComments && (
+              {isLoadingComments ? (
                 <p className="comment-empty">Loading comments...</p>
-              )}
-
-              {!isLoadingComments && comments.length === 0 && (
-                <p className="comment-empty">
-                  No comments yet. Start the conversation.
-                </p>
-              )}
-
-              {!isLoadingComments &&
+              ) : comments.length === 0 ? (
+                <p className="comment-empty">No comments yet.</p>
+              ) : (
                 comments.map((comment) => (
-                  <article key={comment._id} className="comment-item">
+                  <div key={comment._id} className="comment-item">
                     <div className="comment-meta">
-                      <strong>
-                        {comment.username || comment.user?.username}
-                      </strong>
+                      <strong>{comment.user?.username || "User"}</strong>
                       <span className="comment-time">
                         {formatCommentTime(comment.createdAt)}
                       </span>
                     </div>
                     <p>{comment.text}</p>
-                  </article>
-                ))}
+                  </div>
+                ))
+              )}
             </div>
 
-            {commentError && <p className="comment-error">{commentError}</p>}
+            {commentError ? (
+              <p className="comment-error">{commentError}</p>
+            ) : null}
 
-            <form
-              className="comment-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                sendComment();
-              }}
-            >
+            <div className="comment-form">
               <input
                 value={text}
                 onChange={(event) => setText(event.target.value)}
                 placeholder={
                   canComment
-                    ? "Add comment..."
-                    : "Log in with a user account to comment"
+                    ? "Write a comment"
+                    : "Log in as a user to comment"
                 }
-                disabled={!canComment}
+                disabled={!isLoggedIn || !canComment}
               />
-              <button type="submit" disabled={!canComment || !text.trim()}>
+              <button
+                type="button"
+                onClick={sendComment}
+                disabled={!text.trim() || !isLoggedIn || !canComment}
+              >
                 Send
               </button>
-            </form>
+            </div>
           </div>
         </div>
       )}
