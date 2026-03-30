@@ -5,33 +5,37 @@ import ReelFeed from "../../components/ReelFeed";
 
 const Home = () => {
   const [videos, setVideos] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // ✅ Check login
   useEffect(() => {
     axios
-      .get("http://localhost:3000/api/auth/me", {
-        withCredentials: true,
-      })
-      .then(() => setIsLoggedIn(true))
-      .catch(() => setIsLoggedIn(false));
-  }, []);
-
-  // ✅ Fetch videos
-  useEffect(() => {
-    axios
-      .get("http://localhost:3000/api/food", {
+      .get("/api/auth/me", {
         withCredentials: true,
       })
       .then((response) => {
-        setVideos(response.data.foodItems);
+        setCurrentUser(response.data.user || null);
+        setIsLoggedIn(true);
       })
       .catch(() => {
-        // optional
+        setCurrentUser(null);
+        setIsLoggedIn(false);
       });
   }, []);
 
-  // ✅ LIKE FUNCTION
+  useEffect(() => {
+    axios
+      .get("/api/food", {
+        withCredentials: true,
+      })
+      .then((response) => {
+        setVideos(response.data.foodItems || []);
+      })
+      .catch(() => {
+        setVideos([]);
+      });
+  }, []);
+
   async function likeVideo(item) {
     if (!isLoggedIn) {
       alert("Please login first");
@@ -40,29 +44,28 @@ const Home = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/api/food/like",
+        "/api/food/like",
         { foodId: item._id },
-        { withCredentials: true }
+        { withCredentials: true },
       );
 
       setVideos((prev) =>
-        prev.map((v) =>
-          v._id === item._id
+        prev.map((video) =>
+          video._id === item._id
             ? {
-                ...v,
+                ...video,
                 likeCount: response.data.like
-                  ? v.likeCount + 1
-                  : v.likeCount - 1,
+                  ? (video.likeCount ?? 0) + 1
+                  : Math.max((video.likeCount ?? 0) - 1, 0),
               }
-            : v
-        )
+            : video,
+        ),
       );
     } catch (err) {
       console.error(err);
     }
   }
 
-  // ✅ SAVE FUNCTION (FIXED)
   async function saveVideo(item) {
     if (!isLoggedIn) {
       alert("Please login first");
@@ -71,22 +74,22 @@ const Home = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/api/food/save",
+        "/api/food/save",
         { foodId: item._id },
-        { withCredentials: true }
+        { withCredentials: true },
       );
 
       setVideos((prev) =>
-        prev.map((v) =>
-          v._id === item._id
+        prev.map((video) =>
+          video._id === item._id
             ? {
-                ...v,
+                ...video,
                 savesCount: response.data.save
-                  ? v.savesCount + 1
-                  : v.savesCount - 1,
+                  ? (video.savesCount ?? 0) + 1
+                  : Math.max((video.savesCount ?? 0) - 1, 0),
               }
-            : v
-        )
+            : video,
+        ),
       );
     } catch (err) {
       console.error(err);
@@ -99,6 +102,8 @@ const Home = () => {
       onLike={likeVideo}
       onSave={saveVideo}
       isLoggedIn={isLoggedIn}
+      user={currentUser}
+      canComment={currentUser?.accountType === "user"}
       emptyMessage="No videos available."
     />
   );

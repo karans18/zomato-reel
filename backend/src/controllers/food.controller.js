@@ -2,9 +2,36 @@ const foodModel = require("../models/food.model");
 const storageService = require("../services/storage.service");
 const likeModel = require("../models/likes.model");
 const saveModel = require("../models/save.model");
+const commentModel = require("../models/comments.model");
 const { v4: uuid } = require("uuid");
+const { normalizeComment } = require("../utils/comment.utils");
 
-// ✅ CREATE FOOD
+async function buildCommentCountMap(reelIds = []) {
+  if (reelIds.length === 0) {
+    return new Map();
+  }
+
+  const commentCounts = await commentModel.aggregate([
+    {
+      $match: {
+        reel: {
+          $in: reelIds,
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$reel",
+        count: {
+          $sum: 1,
+        },
+      },
+    },
+  ]);
+
+  return new Map(commentCounts.map(({ _id, count }) => [String(_id), count]));
+}
+
 async function createFood(req, res) {
   try {
     if (!req.file) {
@@ -41,22 +68,29 @@ async function createFood(req, res) {
   }
 }
 
-// ✅ GET FOOD ITEMS (PAGINATION)
 async function getFoodItems(req, res) {
   try {
-    const limit = parseInt(req.query.limit) || 20;
-    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const page = parseInt(req.query.page, 10) || 1;
     const skip = (page - 1) * limit;
 
     const foodItems = await foodModel
       .find({})
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
+
+    const commentCountMap = await buildCommentCountMap(
+      foodItems.map((item) => item._id),
+    );
 
     res.status(200).json({
       message: "Food items fetched successfully",
-      foodItems,
+      foodItems: foodItems.map((item) => ({
+        ...item,
+        commentsCount: commentCountMap.get(String(item._id)) ?? 0,
+      })),
     });
   } catch (err) {
     console.error("getFoodItems error:", err);
@@ -64,7 +98,6 @@ async function getFoodItems(req, res) {
   }
 }
 
-// ✅ LIKE FOOD
 async function likeFood(req, res) {
   try {
     const { foodId } = req.body;
@@ -118,7 +151,6 @@ async function likeFood(req, res) {
   }
 }
 
-// ✅ SAVE FOOD
 async function saveFood(req, res) {
   try {
     const { foodId } = req.body;
@@ -172,7 +204,6 @@ async function saveFood(req, res) {
   }
 }
 
-// ✅ GET SAVED FOODS
 async function getSaveFood(req, res) {
   try {
     const user = req.user || req.foodPartner;
@@ -183,15 +214,50 @@ async function getSaveFood(req, res) {
 
     const savedFoods = await saveModel
       .find({ user: user._id })
-      .populate("food");
+      .populate("food")
+      .lean();
+
+    const commentCountMap = await buildCommentCountMap(
+      savedFoods.map((item) => item.food?._id).filter(Boolean),
+    );
 
     res.status(200).json({
       message: "Saved foods retrieved successfully",
-      savedFoods: savedFoods || [],
+      savedFoods: savedFoods.map((item) => {
+        if (!item.food?._id) {
+          return item;
+        }
+
+        return {
+          ...item,
+          food: {
+            ...item.food,
+            commentsCount: commentCountMap.get(String(item.food._id)) ?? 0,
+          },
+        };
+      }),
     });
   } catch (err) {
     console.error("getSaveFood error:", err);
     res.status(500).json({ message: "Server error. Please try again." });
+  }
+}
+
+async function getCommentsByReel(req, res) {
+  try {
+    const comments = await commentModel
+      .find({ reel: req.params.reelId })
+      .populate("user", "fullName")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      message: "Comments fetched successfully",
+      comments: comments.map(normalizeComment),
+    });
+  } catch (err) {
+    console.error("getCommentsByReel error:", err);
+    res.status(500).json({ message: err.message });
   }
 }
 
@@ -201,4 +267,5 @@ module.exports = {
   likeFood,
   saveFood,
   getSaveFood,
+  getCommentsByReel,
 };

@@ -58,8 +58,10 @@ async function authUserOrPartnerMiddleware(req, res, next) {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const user = await userModel.findById(decoded.id);
-        const foodPartner = await foodPartnerModel.findById(decoded.id);
+        const [user, foodPartner] = await Promise.all([
+            userModel.findById(decoded.id).select('-password'),
+            foodPartnerModel.findById(decoded.id).select('-password'),
+        ]);
 
         if (user) req.user = user;
         if (foodPartner) req.foodPartner = foodPartner;

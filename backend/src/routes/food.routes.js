@@ -40,4 +40,7 @@ router.get(
   foodController.getSaveFood,
 );
 
+// GET /api/food/comments/:reelId [public]
+router.get("/comments/:reelId", foodController.getCommentsByReel);
+
 module.exports = router;
