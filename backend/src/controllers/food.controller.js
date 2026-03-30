@@ -354,6 +354,58 @@ async function addToCart(req, res) {
   }
 }
 
+async function removeFromCart(req, res) {
+  try {
+    const { foodId } = req.params;
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!foodId) {
+      return res.status(400).json({ message: "foodId is required" });
+    }
+
+    const cart = await cartModel.findOne({ user: user._id });
+
+    if (!cart) {
+      return res.status(200).json({
+        message: "Cart updated successfully",
+        cart: normalizeCart(null),
+      });
+    }
+
+    const nextItems = cart.items.filter((item) => item.food.toString() !== foodId);
+
+    if (nextItems.length === cart.items.length) {
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
+    if (nextItems.length === 0) {
+      await cartModel.deleteOne({ _id: cart._id });
+
+      return res.status(200).json({
+        message: "Item removed from cart successfully",
+        cart: normalizeCart(null),
+      });
+    }
+
+    cart.items = nextItems;
+    await cart.save();
+
+    const populatedCart = await getPopulatedCart(user._id);
+
+    res.status(200).json({
+      message: "Item removed from cart successfully",
+      cart: normalizeCart(populatedCart),
+    });
+  } catch (err) {
+    console.error("removeFromCart error:", err);
+    res.status(500).json({ message: err.message });
+  }
+}
+
 module.exports = {
   createFood,
   getFoodItems,
@@ -363,4 +415,5 @@ module.exports = {
   getCommentsByReel,
   getCart,
   addToCart,
+  removeFromCart,
 };

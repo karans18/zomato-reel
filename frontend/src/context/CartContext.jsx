@@ -93,6 +93,29 @@ export function CartProvider({ children }) {
     }
   }
 
+  async function removeFromCart(foodId) {
+    try {
+      const response = await axios.delete(`/api/food/cart/${foodId}`, {
+        withCredentials: true,
+      });
+
+      const nextCart = normalizeCart(response.data.cart);
+
+      setCart(nextCart);
+      setCartError("");
+      setCanUseCart(true);
+
+      return nextCart;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        setCart(getEmptyCart());
+        setCanUseCart(false);
+      }
+
+      throw error;
+    }
+  }
+
   return (
     <CartContext.Provider
       value={{
@@ -103,6 +126,7 @@ export function CartProvider({ children }) {
         cartError,
         canUseCart,
         addToCart,
+        removeFromCart,
         refreshCart,
       }}
     >

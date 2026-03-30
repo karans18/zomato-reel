@@ -58,4 +58,11 @@ router.post(
   foodController.addToCart,
 );
 
+/* DELETE /api/food/cart/:foodId [protected - user only] */
+router.delete(
+  "/cart/:foodId",
+  authMiddleware.authUserMiddleware,
+  foodController.removeFromCart,
+);
+
 module.exports = router;
