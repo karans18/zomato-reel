@@ -166,6 +166,32 @@ const ReelFeed = ({
     };
   }, []);
 
+  useEffect(() => {
+    const handleConnect = () => {
+      if (currentRoomRef.current) {
+        socket.emit("join_reel", currentRoomRef.current);
+      }
+    };
+
+    socket.on("connect", handleConnect);
+
+    return () => {
+      socket.off("connect", handleConnect);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (socket.connected) {
+      socket.disconnect();
+    }
+
+    socket.connect();
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [isLoggedIn]);
+
   const setVideoRef = (id) => (element) => {
     if (!element) {
       videoRefs.current.delete(id);
