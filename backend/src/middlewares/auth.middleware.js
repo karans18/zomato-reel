@@ -2,8 +2,32 @@ const foodPartnerModel = require("../models/foodpartner.model");
 const userModel = require("../models/user.model");
 const jwt = require("jsonwebtoken");
 
+function getBearerToken(headerValue = "") {
+    if (typeof headerValue !== "string") {
+        return "";
+    }
+
+    const [scheme, token] = headerValue.trim().split(/\s+/, 2);
+
+    if (scheme?.toLowerCase() !== "bearer" || !token) {
+        return "";
+    }
+
+    return token.trim();
+}
+
+function getRequestToken(req) {
+    const bearerToken = getBearerToken(req.headers.authorization);
+
+    if (bearerToken) {
+        return bearerToken;
+    }
+
+    return req.cookies?.token || "";
+}
+
 async function authFoodPartnerMiddleware(req, res, next) {
-    const token = req.cookies.token;
+    const token = getRequestToken(req);
 
     if (!token) {
         return res.status(401).json({ message: "Please login first" });
@@ -26,7 +50,7 @@ async function authFoodPartnerMiddleware(req, res, next) {
 }
 
 async function authUserMiddleware(req, res, next) {
-    const token = req.cookies.token;
+    const token = getRequestToken(req);
 
     if (!token) {
         return res.status(401).json({ message: "Please login first" });
@@ -50,7 +74,7 @@ async function authUserMiddleware(req, res, next) {
 
 async function authUserOrPartnerMiddleware(req, res, next) {
     try {
-        const token = req.cookies.token;
+        const token = getRequestToken(req);
 
         if (!token) {
             return res.status(401).json({ message: "Unauthorized" });

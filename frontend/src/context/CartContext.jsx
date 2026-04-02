@@ -1,5 +1,13 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import api from "../lib/api";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext(null);
 
@@ -29,16 +37,13 @@ function normalizeCart(cart) {
 }
 
 export function CartProvider({ children }) {
+  const { currentUser, isAuthResolved } = useAuth();
   const [cart, setCart] = useState(getEmptyCart);
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [cartError, setCartError] = useState("");
   const [canUseCart, setCanUseCart] = useState(false);
 
-  useEffect(() => {
-    refreshCart();
-  }, []);
-
-  async function refreshCart(options = {}) {
+  const refreshCart = useCallback(async (options = {}) => {
     const { showLoader = true } = options;
 
     if (showLoader) {
@@ -64,9 +69,9 @@ export function CartProvider({ children }) {
     } finally {
       setIsCartLoading(false);
     }
-  }
+  }, []);
 
-  async function addToCart(foodId) {
+  const addToCart = useCallback(async (foodId) => {
     try {
       const response = await api.post("/api/food/cart", { foodId });
 
@@ -85,9 +90,9 @@ export function CartProvider({ children }) {
 
       throw error;
     }
-  }
+  }, []);
 
-  async function removeFromCart(foodId) {
+  const removeFromCart = useCallback(async (foodId) => {
     try {
       const response = await api.delete(`/api/food/cart/${foodId}`);
 
@@ -106,32 +111,61 @@ export function CartProvider({ children }) {
 
       throw error;
     }
-  }
+  }, []);
 
-  function resetCart() {
+  const resetCart = useCallback(() => {
     setCart(getEmptyCart());
     setCartError("");
     setCanUseCart(false);
     setIsCartLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthResolved) {
+      return;
+    }
+
+    if (currentUser?.accountType === "user") {
+      refreshCart({ showLoader: false });
+      return;
+    }
+
+    resetCart();
+  }, [
+    currentUser?._id,
+    currentUser?.accountType,
+    isAuthResolved,
+    refreshCart,
+    resetCart,
+  ]);
+
+  const value = useMemo(
+    () => ({
+      cart,
+      cartItems: cart.items,
+      cartCount: cart.totalItems,
+      isCartLoading,
+      cartError,
+      canUseCart,
+      addToCart,
+      removeFromCart,
+      refreshCart,
+      resetCart,
+    }),
+    [
+      addToCart,
+      canUseCart,
+      cart,
+      cartError,
+      isCartLoading,
+      refreshCart,
+      removeFromCart,
+      resetCart,
+    ],
+  );
 
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        cartItems: cart.items,
-        cartCount: cart.totalItems,
-        isCartLoading,
-        cartError,
-        canUseCart,
-        addToCart,
-        removeFromCart,
-        refreshCart,
-        resetCart,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+    <CartContext.Provider value={value}>{children}</CartContext.Provider>
   );
 }
 

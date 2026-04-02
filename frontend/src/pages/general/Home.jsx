@@ -16,24 +16,10 @@ const Home = () => {
     isLoggedIn,
     isLoggingOut,
     logout,
-    refreshSession,
   } = useAuth();
-  const { addToCart, cartCount, refreshCart: loadCart, resetCart } = useCart();
+  const { addToCart, cartCount, resetCart } = useCart();
   const [videos, setVideos] = useState([]);
   const [isLoginOverlayMinimized, setIsLoginOverlayMinimized] = useState(false);
-
-  useEffect(() => {
-    if (!isAuthResolved) {
-      return;
-    }
-
-    if (currentUser?.accountType === "user") {
-      loadCart({ showLoader: false });
-      return;
-    }
-
-    resetCart();
-  }, [currentUser, isAuthResolved, loadCart, resetCart]);
 
   useEffect(() => {
     api
@@ -127,8 +113,7 @@ const Home = () => {
     navigate("/cart");
   }
 
-  async function handleLoginSuccess() {
-    await refreshSession();
+  function handleLoginSuccess() {
     setIsLoginOverlayMinimized(false);
   }
 

@@ -19,7 +19,21 @@ connectDB();
 
 const server = http.createServer(app);
 
-function parseCookies(cookieHeader = "") {
+function getBearerToken(headerValue = "") {
+  if (typeof headerValue !== "string") {
+    return "";
+  }
+
+  const [scheme, token] = headerValue.trim().split(/\s+/, 2);
+
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    return "";
+  }
+
+  return token.trim();
+}
+
+function parseCookieHeader(cookieHeader = "") {
   return cookieHeader
     .split(";")
     .map((cookie) => cookie.trim())
@@ -34,6 +48,23 @@ function parseCookies(cookieHeader = "") {
       acc[name] = decodeURIComponent(valueParts.join("="));
       return acc;
     }, {});
+}
+
+function getSocketToken(handshake = {}) {
+  const authToken =
+    typeof handshake.auth?.token === "string" ? handshake.auth.token.trim() : "";
+
+  if (authToken) {
+    return authToken;
+  }
+
+  const bearerToken = getBearerToken(handshake.headers?.authorization);
+
+  if (bearerToken) {
+    return bearerToken;
+  }
+
+  return parseCookieHeader(handshake.headers?.cookie || "").token || "";
 }
 
 function getReelRoom(reelId) {
@@ -60,7 +91,7 @@ const io = new Server(server, {
 
 io.use(async (socket, next) => {
   try {
-    const token = parseCookies(socket.handshake.headers.cookie || "").token;
+    const token = getSocketToken(socket.handshake);
 
     if (!token) {
       socket.data.user = null;

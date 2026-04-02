@@ -7,6 +7,16 @@ const {
   CLEAR_COOKIE_OPTIONS,
 } = require("../config/client.config");
 
+function normalizeEmail(email = "") {
+  return email.trim().toLowerCase();
+}
+
+function createAuthToken(subjectId) {
+  return jwt.sign({ id: subjectId }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+}
+
 function serializeUser(user) {
   return {
     _id: user._id,
@@ -30,9 +40,24 @@ function serializeFoodPartner(foodPartner) {
   };
 }
 
+function sendAuthResponse(res, statusCode, message, payloadKey, account) {
+  const token = createAuthToken(account._id);
+
+  res.cookie("token", token, COOKIE_OPTIONS);
+
+  return res.status(statusCode).json({
+    message,
+    token,
+    [payloadKey]:
+      payloadKey === "user" ? serializeUser(account) : serializeFoodPartner(account),
+  });
+}
+
 async function registerUser(req, res) {
   try {
-    const { fullName, email, password } = req.body;
+    const fullName = req.body.fullName?.trim();
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.password;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -56,24 +81,28 @@ async function registerUser(req, res) {
       password: hashedPassword,
     });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-    res.cookie("token", token, COOKIE_OPTIONS);
-
-    res.status(201).json({
-      message: "User registered successfully",
-      user: serializeUser(user),
-    });
+    return sendAuthResponse(
+      res,
+      201,
+      "User registered successfully",
+      "user",
+      user,
+    );
   } catch (err) {
     console.error("registerUser error:", err);
+
+    if (err?.code === 11000) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
     res.status(500).json({ message: "Server error. Please try again." });
   }
 }
 
 async function loginUser(req, res) {
   try {
-    const { email, password } = req.body;
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.password;
 
     if (!email || !password) {
       return res
@@ -91,15 +120,7 @@ async function loginUser(req, res) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-    res.cookie("token", token, COOKIE_OPTIONS);
-
-    res.status(200).json({
-      message: "User logged in successfully",
-      user: serializeUser(user),
-    });
+    return sendAuthResponse(res, 200, "User logged in successfully", "user", user);
   } catch (err) {
     console.error("loginUser error:", err);
     res.status(500).json({ message: "Server error. Please try again." });
@@ -113,7 +134,12 @@ function logoutUser(req, res) {
 
 async function registerFoodPartner(req, res) {
   try {
-    const { name, email, password, phone, address, contactName } = req.body;
+    const name = req.body.name?.trim();
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.password;
+    const phone = req.body.phone?.trim();
+    const address = req.body.address?.trim();
+    const contactName = req.body.contactName?.trim();
 
     if (!name || !email || !password || !phone || !address || !contactName) {
       return res.status(400).json({ message: "All fields are required" });
@@ -142,24 +168,30 @@ async function registerFoodPartner(req, res) {
       contactName,
     });
 
-    const token = jwt.sign({ id: foodPartner._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-    res.cookie("token", token, COOKIE_OPTIONS);
-
-    res.status(201).json({
-      message: "Food partner registered successfully",
-      foodPartner: serializeFoodPartner(foodPartner),
-    });
+    return sendAuthResponse(
+      res,
+      201,
+      "Food partner registered successfully",
+      "foodPartner",
+      foodPartner,
+    );
   } catch (err) {
     console.error("registerFoodPartner error:", err);
+
+    if (err?.code === 11000) {
+      return res
+        .status(400)
+        .json({ message: "Food partner account already exists" });
+    }
+
     res.status(500).json({ message: "Server error. Please try again." });
   }
 }
 
 async function loginFoodPartner(req, res) {
   try {
-    const { email, password } = req.body;
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.password;
 
     if (!email || !password) {
       return res
@@ -180,15 +212,13 @@ async function loginFoodPartner(req, res) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign({ id: foodPartner._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-    res.cookie("token", token, COOKIE_OPTIONS);
-
-    res.status(200).json({
-      message: "Food partner logged in successfully",
-      foodPartner: serializeFoodPartner(foodPartner),
-    });
+    return sendAuthResponse(
+      res,
+      200,
+      "Food partner logged in successfully",
+      "foodPartner",
+      foodPartner,
+    );
   } catch (err) {
     console.error("loginFoodPartner error:", err);
     res.status(500).json({ message: "Server error. Please try again." });

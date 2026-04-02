@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-import api from "../lib/api";
+import api, { clearStoredAuthToken } from "../lib/api";
 
 const AuthContext = createContext(null);
 
@@ -31,6 +31,10 @@ export function AuthProvider({ children }) {
 
       return user;
     } catch (error) {
+      if (error.response?.status === 401) {
+        clearStoredAuthToken();
+      }
+
       setCurrentUser(null);
       setIsAuthResolved(true);
 
@@ -44,6 +48,7 @@ export function AuthProvider({ children }) {
     }
 
     if (!currentUser?.accountType) {
+      clearStoredAuthToken();
       setCurrentUser(null);
       setIsAuthResolved(true);
       return true;
@@ -53,11 +58,16 @@ export function AuthProvider({ children }) {
 
     try {
       await api.post(getLogoutEndpoint(currentUser.accountType));
-
+      clearStoredAuthToken();
       setCurrentUser(null);
       setIsAuthResolved(true);
 
       return true;
+    } catch (error) {
+      clearStoredAuthToken();
+      setCurrentUser(null);
+      setIsAuthResolved(true);
+      throw error;
     } finally {
       setIsLoggingOut(false);
     }

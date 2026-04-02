@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
 import "../../styles/auth-shared.css";
-import api from "../../lib/api";
+import api, { clearStoredAuthToken, storeAuthToken } from "../../lib/api";
 
 const UserLogin = ({
   variant = "page",
@@ -18,6 +18,14 @@ const UserLogin = ({
   const { isAuthResolved, isLoggedIn, refreshSession } = useAuth();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function goTo(path) {
+    return (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      navigate(path);
+    };
+  }
 
   useEffect(() => {
     if (variant !== "page" || !isAuthResolved || !isLoggedIn) {
@@ -44,11 +52,21 @@ const UserLogin = ({
     setLoading(true);
 
     try {
-      await api.post("/api/auth/user/login", {
+      const response = await api.post("/api/auth/user/login", {
         email,
         password,
       });
+
+      storeAuthToken(response.data?.token || "");
+
       const user = await refreshSession();
+
+      if (!user) {
+        clearStoredAuthToken();
+        throw new Error(
+          "We couldn't verify your session. Please try signing in again.",
+        );
+      }
 
       if (typeof onSuccess === "function") {
         onSuccess(user);
@@ -58,7 +76,11 @@ const UserLogin = ({
         navigate("/", { replace: true });
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Login failed. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -68,12 +90,18 @@ const UserLogin = ({
     <div
       className={`auth-page-wrapper ${isOverlay ? "auth-page-wrapper--overlay" : ""}`}
     >
-      {isOverlay && !isMinimized ? <div className="auth-overlay-backdrop" /> : null}
+      {isOverlay && !isMinimized ? (
+        <div className="auth-overlay-backdrop" />
+      ) : null}
 
       {showFoodPartnerShortcut ? (
-        <Link to="/food-partner/login" className="auth-partner-shortcut">
+        <button
+          type="button"
+          className="auth-partner-shortcut"
+          onClick={goTo("/food-partner/login")}
+        >
           Login as Food Partner
-        </Link>
+        </button>
       ) : null}
 
       {isOverlay && isMinimized ? (
@@ -86,7 +114,7 @@ const UserLogin = ({
         </button>
       ) : null}
 
-      {(!isOverlay || !isMinimized) ? (
+      {!isOverlay || !isMinimized ? (
         <div
           className={`auth-card ${isOverlay ? "auth-card--overlay" : ""}`}
           role="region"
@@ -159,7 +187,37 @@ const UserLogin = ({
           </form>
 
           <div className="auth-alt-action">
-            New here? <Link to="/user/register">Create account</Link>
+            {showFoodPartnerShortcut ? (
+              <>
+                New here?{" "}
+                <button
+                  type="button"
+                  className="auth-inline-link"
+                  onClick={goTo("/user/register")}
+                >
+                  Create user account
+                </button>{" "}
+                {/* or{" "} */}
+                {/* <button
+                  type="button"
+                  className="auth-inline-link"
+                  onClick={goTo("/food-partner/register")}
+                >
+                  Partner sign up
+                </button> */}
+              </>
+            ) : (
+              <>
+                New here?{" "}
+                <button
+                  type="button"
+                  className="auth-inline-link"
+                  onClick={goTo("/user/register")}
+                >
+                  Create account
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : null}
