@@ -7,7 +7,12 @@ const connectDB = require("./src/db/db");
 const Comment = require("./src/models/comments.model");
 const Food = require("./src/models/food.model");
 const User = require("./src/models/user.model");
-const { getAllowedOrigins } = require("./src/config/client.config");
+const {
+  ALLOWED_HEADERS,
+  ALLOWED_METHODS,
+  getAllowedOrigins,
+  isAllowedOrigin,
+} = require("./src/config/client.config");
 const { normalizeComment } = require("./src/utils/comment.utils");
 
 connectDB();
@@ -39,6 +44,17 @@ const io = new Server(server, {
   cors: {
     origin: getAllowedOrigins(),
     credentials: true,
+    methods: ALLOWED_METHODS,
+    allowedHeaders: ALLOWED_HEADERS,
+  },
+  allowRequest: (req, callback) => {
+    const requestOrigin = req.headers.origin;
+
+    if (!requestOrigin || isAllowedOrigin(requestOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback("Origin not allowed by Socket.IO CORS.", false);
   },
 });
 

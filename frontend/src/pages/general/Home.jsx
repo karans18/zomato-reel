@@ -58,10 +58,7 @@ const Home = () => {
     }
 
     try {
-      const response = await api.post(
-        "/api/food/like",
-        { foodId: item._id },
-      );
+      const response = await api.post("/api/food/like", { foodId: item._id });
 
       setVideos((prev) =>
         prev.map((video) =>
@@ -87,10 +84,7 @@ const Home = () => {
     }
 
     try {
-      const response = await api.post(
-        "/api/food/save",
-        { foodId: item._id },
-      );
+      const response = await api.post("/api/food/save", { foodId: item._id });
 
       setVideos((prev) =>
         prev.map((video) =>

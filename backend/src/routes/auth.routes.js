@@ -19,6 +19,4 @@ router.get(
   authController.getMe
 );
 
-// get current user
-router;
 module.exports = router;

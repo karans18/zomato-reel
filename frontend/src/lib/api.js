@@ -1,14 +1,32 @@
 import axios from "axios";
 
+const DEFAULT_DEV_API_URL = "http://localhost:3000";
+const DEFAULT_PROD_API_URL = "https://reelbites-1gw7.onrender.com";
+
 function normalizeUrl(url = "") {
   return url.trim().replace(/\/$/, "");
 }
 
-const apiBaseUrl = normalizeUrl(import.meta.env.VITE_API_URL || "");
+function getApiBaseUrl() {
+  const explicitApiUrl = normalizeUrl(import.meta.env.VITE_API_URL || "");
+
+  if (explicitApiUrl) {
+    return explicitApiUrl;
+  }
+
+  if (import.meta.env.DEV) {
+    return undefined;
+  }
+
+  return DEFAULT_PROD_API_URL;
+}
+
+const apiBaseUrl = getApiBaseUrl();
 
 const api = axios.create({
-  baseURL: apiBaseUrl || undefined,
+  baseURL: apiBaseUrl,
   withCredentials: true,
+  timeout: 15000,
 });
 
 export function getSocketServerUrl() {
@@ -23,14 +41,10 @@ export function getSocketServerUrl() {
   }
 
   if (import.meta.env.DEV) {
-    return "http://localhost:3000";
+    return DEFAULT_DEV_API_URL;
   }
 
-  if (typeof window !== "undefined") {
-    return window.location.origin;
-  }
-
-  return undefined;
+  return DEFAULT_PROD_API_URL;
 }
 
 export default api;
