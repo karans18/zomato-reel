@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/auth-shared.css';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
 
 const FoodPartnerLogin = () => {
     const navigate = useNavigate();
+    const { refreshSession } = useAuth();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -23,6 +25,7 @@ const FoodPartnerLogin = () => {
         setLoading(true);
         try {
             await api.post("/api/auth/food-partner/login", { email, password });
+            await refreshSession();
             navigate("/create-food");
         } catch (err) {
             setError(err.response?.data?.message || "Login failed. Please try again.");

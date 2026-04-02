@@ -53,6 +53,28 @@ async function getPopulatedCart(userId) {
   return cartModel.findOne({ user: userId }).populate("items.food").lean();
 }
 
+function normalizeSavedFood(item, commentCountMap) {
+  if (!item?.food?._id) {
+    return item;
+  }
+
+  return {
+    ...item,
+    food: {
+      _id: item.food._id,
+      name: item.food.name || "",
+      video: item.food.video || "",
+      description: item.food.description || "",
+      foodPartner: item.food.foodPartner || null,
+      likeCount: item.food.likeCount ?? 0,
+      savesCount: item.food.savesCount ?? 0,
+      commentsCount: commentCountMap.get(String(item.food._id)) ?? 0,
+      createdAt: item.food.createdAt,
+      updatedAt: item.food.updatedAt,
+    },
+  };
+}
+
 async function createFood(req, res) {
   try {
     if (!req.file) {
@@ -235,7 +257,10 @@ async function getSaveFood(req, res) {
 
     const savedFoods = await saveModel
       .find({ user: user._id })
-      .populate("food")
+      .populate(
+        "food",
+        "name video description foodPartner likeCount savesCount createdAt updatedAt",
+      )
       .lean();
 
     const commentCountMap = await buildCommentCountMap(
@@ -244,19 +269,9 @@ async function getSaveFood(req, res) {
 
     res.status(200).json({
       message: "Saved foods retrieved successfully",
-      savedFoods: savedFoods.map((item) => {
-        if (!item.food?._id) {
-          return item;
-        }
-
-        return {
-          ...item,
-          food: {
-            ...item.food,
-            commentsCount: commentCountMap.get(String(item.food._id)) ?? 0,
-          },
-        };
-      }),
+      savedFoods: savedFoods.map((item) =>
+        normalizeSavedFood(item, commentCountMap),
+      ),
     });
   } catch (err) {
     console.error("getSaveFood error:", err);

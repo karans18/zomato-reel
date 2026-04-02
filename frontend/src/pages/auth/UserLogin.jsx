@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { useAuth } from "../../context/AuthContext";
 import "../../styles/auth-shared.css";
 import api from "../../lib/api";
 
@@ -14,31 +15,17 @@ const UserLogin = ({
   onRestore,
 }) => {
   const navigate = useNavigate();
+  const { isAuthResolved, isLoggedIn, refreshSession } = useAuth();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (variant !== "page") {
+    if (variant !== "page" || !isAuthResolved || !isLoggedIn) {
       return;
     }
 
-    let isMounted = true;
-
-    api
-      .get("/api/auth/me")
-      .then((response) => {
-        if (!isMounted || !response.data.user) {
-          return;
-        }
-
-        navigate("/", { replace: true });
-      })
-      .catch(() => {});
-
-    return () => {
-      isMounted = false;
-    };
-  }, [navigate, variant]);
+    navigate("/", { replace: true });
+  }, [isAuthResolved, isLoggedIn, navigate, variant]);
 
   const isOverlay = variant === "overlay";
 
@@ -57,13 +44,14 @@ const UserLogin = ({
     setLoading(true);
 
     try {
-      const response = await api.post("/api/auth/user/login", {
+      await api.post("/api/auth/user/login", {
         email,
         password,
       });
+      const user = await refreshSession();
 
       if (typeof onSuccess === "function") {
-        onSuccess(response.data.user || null);
+        onSuccess(user);
       }
 
       if (redirectOnSuccess) {

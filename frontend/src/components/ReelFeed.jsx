@@ -79,9 +79,11 @@ const ReelFeed = ({
   onSave,
   onAddToCart,
   onOpenCart,
+  onLogout,
   cartCount = 0,
   emptyMessage = "No videos yet.",
   isLoggedIn = false,
+  isLoggingOut = false,
   canComment = false,
   onRequireLogin,
 }) => {
@@ -185,6 +187,10 @@ const ReelFeed = ({
       socket.disconnect();
     }
 
+    if (!isLoggedIn) {
+      return undefined;
+    }
+
     socket.connect();
 
     return () => {
@@ -286,16 +292,33 @@ const ReelFeed = ({
 
   return (
     <div className="reels-page">
-      {typeof onOpenCart === "function" && (
+      {(typeof onLogout === "function" || typeof onOpenCart === "function") && (
         <div className="reels-topbar">
-          <button
-            type="button"
-            className="reels-cart-button"
-            onClick={onOpenCart}
-          >
-            Cart
-            <span className="reels-cart-badge">{cartCount}</span>
-          </button>
+          <div className="reels-topbar__group">
+            {typeof onLogout === "function" ? (
+              <button
+                type="button"
+                className="reels-topbar-button reels-topbar-button--ghost"
+                onClick={onLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </button>
+            ) : null}
+          </div>
+
+          <div className="reels-topbar__group reels-topbar__group--end">
+            {typeof onOpenCart === "function" ? (
+              <button
+                type="button"
+                className="reels-topbar-button reels-cart-button"
+                onClick={onOpenCart}
+              >
+                Cart
+                <span className="reels-cart-badge">{cartCount}</span>
+              </button>
+            ) : null}
+          </div>
         </div>
       )}
 

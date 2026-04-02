@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/auth-shared.css';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
 
 const FoodPartnerRegister = () => {
     const navigate = useNavigate();
+    const { refreshSession } = useAuth();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -35,6 +37,7 @@ const FoodPartnerRegister = () => {
                 address
             });
 
+            await refreshSession();
             navigate("/create-food");
         } catch (err) {
             setError(err.response?.data?.message || "Registration failed. Please try again.");

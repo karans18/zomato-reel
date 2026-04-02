@@ -108,6 +108,13 @@ export function CartProvider({ children }) {
     }
   }
 
+  function resetCart() {
+    setCart(getEmptyCart());
+    setCartError("");
+    setCanUseCart(false);
+    setIsCartLoading(false);
+  }
+
   return (
     <CartContext.Provider
       value={{
@@ -120,6 +127,7 @@ export function CartProvider({ children }) {
         addToCart,
         removeFromCart,
         refreshCart,
+        resetCart,
       }}
     >
       {children}

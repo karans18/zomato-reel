@@ -10,11 +10,28 @@
 .reels-topbar {
   position: fixed;
   top: max(env(safe-area-inset-top, 0px), 18px);
+  left: 16px;
   right: 16px;
   z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   pointer-events: none;
 }
 
+.reels-topbar__group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.reels-topbar__group--end {
+  margin-left: auto;
+}
+
+.reels-topbar-button,
 .reels-cart-button {
   display: inline-flex;
   align-items: center;
@@ -28,6 +45,16 @@
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
   font-weight: 700;
   pointer-events: auto;
+}
+
+.reels-topbar-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.reels-topbar-button--ghost {
+  justify-content: center;
+  min-width: 92px;
 }
 
 .reels-cart-badge {
@@ -394,6 +421,7 @@
   }
 
   .reels-topbar {
+    left: 24px;
     right: 24px;
   }
 }

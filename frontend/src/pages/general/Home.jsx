@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useAuth } from "../../context/AuthContext";
 import api from "../../lib/api";
 import UserLogin from "../auth/UserLogin";
 import ReelFeed from "../../components/ReelFeed";
@@ -9,36 +10,30 @@ import "../../styles/reels.css";
 
 const Home = () => {
   const navigate = useNavigate();
-  const { addToCart, cartCount, refreshCart } = useCart();
+  const {
+    currentUser,
+    isAuthResolved,
+    isLoggedIn,
+    isLoggingOut,
+    logout,
+    refreshSession,
+  } = useAuth();
+  const { addToCart, cartCount, refreshCart: loadCart, resetCart } = useCart();
   const [videos, setVideos] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAuthResolved, setIsAuthResolved] = useState(false);
   const [isLoginOverlayMinimized, setIsLoginOverlayMinimized] = useState(false);
 
   useEffect(() => {
-    api
-      .get("/api/auth/me")
-      .then((response) => {
-        const user = response.data.user || null;
+    if (!isAuthResolved) {
+      return;
+    }
 
-        setCurrentUser(user);
-        setIsLoggedIn(Boolean(user));
+    if (currentUser?.accountType === "user") {
+      loadCart({ showLoader: false });
+      return;
+    }
 
-        if (user?.accountType === "user") {
-          refreshCart({ showLoader: false });
-        }
-
-        setIsLoginOverlayMinimized(false);
-        setIsAuthResolved(true);
-      })
-      .catch(() => {
-        setCurrentUser(null);
-        setIsLoggedIn(false);
-        setIsLoginOverlayMinimized(false);
-        setIsAuthResolved(true);
-      });
-  }, []);
+    resetCart();
+  }, [currentUser, isAuthResolved, loadCart, resetCart]);
 
   useEffect(() => {
     api
@@ -132,24 +127,29 @@ const Home = () => {
     navigate("/cart");
   }
 
-  function handleLoginSuccess(user) {
-    setCurrentUser(user);
-    setIsLoggedIn(Boolean(user));
-    setIsAuthResolved(true);
+  async function handleLoginSuccess() {
+    await refreshSession();
     setIsLoginOverlayMinimized(false);
-
-    if (user?.accountType === "user") {
-      refreshCart({ showLoader: false });
-    }
   }
 
   function openGuestLoginOverlay() {
     setIsLoginOverlayMinimized(false);
-    setIsAuthResolved(true);
   }
 
   function minimizeGuestLoginOverlay() {
     setIsLoginOverlayMinimized(true);
+  }
+
+  async function handleLogout() {
+    try {
+      await logout();
+      resetCart();
+      setIsLoginOverlayMinimized(false);
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Logout error:", error);
+      alert(error.response?.data?.message || "Unable to log out right now.");
+    }
   }
 
   return (
@@ -159,9 +159,11 @@ const Home = () => {
         onLike={likeVideo}
         onSave={saveVideo}
         onAddToCart={handleAddToCart}
-        onOpenCart={openCart}
+        onOpenCart={currentUser?.accountType === "user" ? openCart : undefined}
+        onLogout={isLoggedIn ? handleLogout : undefined}
         cartCount={cartCount}
         isLoggedIn={isLoggedIn}
+        isLoggingOut={isLoggingOut}
         canComment={currentUser?.accountType === "user"}
         onRequireLogin={openGuestLoginOverlay}
         emptyMessage="No videos available."

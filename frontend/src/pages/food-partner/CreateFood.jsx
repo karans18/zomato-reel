@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../../styles/create-food.css";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import api from "../../lib/api";
 
 const CreateFood = () => {
+  const navigate = useNavigate();
+  const { currentUser, isAuthResolved, isLoggingOut, logout } = useAuth();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [videoFile, setVideoFile] = useState(null);
@@ -12,8 +15,6 @@ const CreateFood = () => {
   const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (!videoFile) {
@@ -24,6 +25,18 @@ const CreateFood = () => {
     setVideoURL(url);
     return () => URL.revokeObjectURL(url);
   }, [videoFile]);
+
+  useEffect(() => {
+    if (!isAuthResolved) {
+      return;
+    }
+
+    if (currentUser?.accountType === "foodPartner") {
+      return;
+    }
+
+    navigate("/food-partner/login", { replace: true });
+  }, [currentUser, isAuthResolved, navigate]);
 
   const onFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
@@ -76,7 +89,7 @@ const CreateFood = () => {
     setLoading(true);
     try {
       await api.post("/api/food", formData);
-      navigate("/");// Redirect to home after successful upload
+      navigate("/"); // Redirect to home after successful upload
       setName("");
       setDescription("");
       setVideoFile(null);
@@ -94,14 +107,49 @@ const CreateFood = () => {
     [name, videoFile, loading],
   );
 
+  async function handleLogout() {
+    try {
+      await logout();
+      navigate("/food-partner/login", { replace: true });
+    } catch (error) {
+      setSubmitError(
+        error.response?.data?.message || "Unable to log out right now.",
+      );
+    }
+  }
+
+  if (!isAuthResolved || currentUser?.accountType !== "foodPartner") {
+    return null;
+  }
+
   return (
     <div className="create-food-page">
       <div className="create-food-card">
         <header className="create-food-header">
-          <h1 className="create-food-title">Create Food</h1>
-          <p className="create-food-subtitle">
-            Upload a short video, give it a name, and add a description.
-          </p>
+          <div className="create-food-header__copy">
+            <h1 className="create-food-title">Create Food</h1>
+            <p className="create-food-subtitle">
+              Upload a short video, give it a name, and add a description.
+            </p>
+          </div>
+
+          <div className="create-food-header__actions">
+            <button
+              type="button"
+              className="create-food-action create-food-action--secondary"
+              onClick={() => navigate("/", { replace: true })}
+            >
+              Home
+            </button>
+            <button
+              type="button"
+              className="create-food-action"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? "Logging out..." : "Logout"}
+            </button>
+          </div>
         </header>
 
         <form className="create-food-form" onSubmit={onSubmit}>
